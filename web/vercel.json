@@ -1,0 +1,6 @@
+{
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/api/panta/:path*", "destination": "/api/panta?path=:path*" }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "name": "group-odds",
+  "version": "0.3.0",
+  "type": "module",
+  "scripts": {
+    "start": "node --env-file=.env src/bot.js",
+    "models": "node --env-file=.env src/models.js",
+    "probe": "node --env-file=.env src/probe.js"
+  },
+  "dependencies": { "grammy": "^1.30.0" }
+}

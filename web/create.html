@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Create a market - I-Called-It</title><style>
+:root{--ink:#0b0820;--card:#15112e;--line:#2a2352;--lime:#bfff46;--vio:#7c3aed;--txt:#f2efff;--mut:#9a93c4;--bad:#ff6b81}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(120% 60% at 20% 0%,#2a1a6e 0%,var(--ink) 60%);color:var(--txt);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;min-height:100vh}
+.app{max-width:460px;margin:0 auto;padding:18px 16px 40px}
+header{display:flex;align-items:center;gap:10px;margin-bottom:16px;font-weight:700}
+header svg{width:34px;height:34px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:14px}
+h1{font-size:19px;line-height:1.3;margin:0 0 10px}
+.mut{color:var(--mut);font-size:13px}
+.bar{display:flex;height:34px;border-radius:10px;overflow:hidden;margin:12px 0 6px;font-weight:700;font-size:14px}
+.bar div{display:flex;align-items:center;justify-content:center;min-width:44px}
+.y{background:var(--lime);color:#10130a}.n{background:var(--vio);color:#fff}
+.sides{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.side{padding:14px;border-radius:12px;border:2px solid var(--line);background:transparent;color:var(--txt);font-weight:700;font-size:16px;cursor:pointer}
+.side.on.yes{border-color:var(--lime);background:#bfff4622}.side.on.no{border-color:var(--vio);background:#7c3aed33}
+.amts{display:flex;gap:8px;margin-bottom:12px}
+.amts button{flex:1;padding:10px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--txt);cursor:pointer}
+.amts button.on{border-color:var(--lime)}
+input{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:#0e0a26;color:var(--txt);font-size:16px}
+.btn{width:100%;margin-top:12px;padding:15px;border:0;border-radius:12px;background:var(--lime);color:#10130a;font-weight:800;font-size:16px;cursor:pointer}
+.btn.alt{background:transparent;border:1px solid var(--line);color:var(--txt)}
+.btn:disabled{opacity:.5}
+.sum{margin-top:12px;padding:12px;border-radius:12px;background:#0e0a26;font-size:14px}
+.sum div{display:flex;justify-content:space-between;padding:2px 0}
+.msg{margin-top:12px;font-size:14px}.err{color:var(--bad)}.ok{color:var(--lime)}
+footer{text-align:center;color:var(--mut);font-size:13px;margin-top:18px}footer a,.pp a{color:var(--lime)}
+.pp{text-align:center;color:var(--mut);font-size:12px;margin-top:10px}
+
+label{display:block;margin:14px 0 6px;color:var(--mut);font-size:13px}
+textarea,select{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:#0e0a26;color:var(--txt);font:inherit}
+textarea{min-height:76px;resize:vertical}.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+input[type=datetime-local]{color-scheme:dark}.warn{margin-top:10px;font-size:13px;color:#ffd166}
+.steps{display:flex;gap:6px;margin:6px 0 4px;font-size:12px;color:var(--mut);flex-wrap:wrap}.steps b{color:var(--lime)}
+canvas{width:100%;border-radius:14px;margin-top:10px;border:1px solid var(--line)}
+</style></head>
+<body><div class="app">
+<header><a href="/" style="color:inherit;text-decoration:none">I-Called-It</a><a href="/markets" style="margin-left:auto;color:var(--lime);font-weight:600;font-size:14px;text-decoration:none">All markets</a></header>
+<section class="card"><h1>Create a market</h1><div class="mut">Review the draft, then create it on Panta. Creating a market costs real USDC (about $50 on Panta today); the exact amount is shown before you sign.</div>
+<label for="q">Question (YES/NO)</label><textarea id="q" maxlength="200"></textarea>
+<label for="r">Resolution rule</label><textarea id="r"></textarea>
+<label for="s">Sources that prove the answer (one https link per line)</label><textarea id="s"></textarea>
+<div class="row2"><div><label for="c">Category</label><select id="c"><option>crypto</option><option>sports</option><option>politics</option><option>entertainment</option></select></div><div><label for="a">Trading opens</label><input id="a" type="datetime-local"></div></div>
+<div class="row2"><div><label for="b">Trading closes</label><input id="b" type="datetime-local"></div><div><label for="x">Result known by</label><input id="x" type="datetime-local"></div></div>
+<div class="warn" id="warn" hidden></div>
+<canvas id="cv" width="1024" height="1024" hidden></canvas>
+<button class="btn" id="go">Connect wallet</button>
+<div class="sum" id="sum" hidden></div>
+<button class="btn alt" id="confirm" hidden>Confirm in wallet</button>
+<div class="msg" id="msg"></div>
+<div class="pp">Powered by <a href="https://panta.market" target="_blank" rel="noopener">Panta</a></div></section>
+<footer>Prediction markets involve risk. Only use money you can afford to lose.<br>Powered by <a href="https://panta.market" target="_blank" rel="noopener">Panta</a></footer></div>
+<script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.98.4/lib/index.iife.min.js"></script>
+<script>
+const qs=new URLSearchParams(location.search),DRY=!!qs.get("dry"),$=id=>document.getElementById(id);
+const pad=n=>String(n).padStart(2,"0"),money=n=>"$"+Number(n).toFixed(2);
+// Panta sends create-market amounts in base units (50000000 = 50 USDC); decimals are already dollars.
+const usdc=v=>{if(v==null||v==="")return null;const s=String(v);return /^\d+$/.test(s)?Number(s)/1e6:Number(s)};
+const toLocal=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+"T"+pad(d.getHours())+":"+pad(d.getMinutes());
+const unix=v=>Math.floor(new Date(v).getTime()/1000);
+function b64d(s){s=s.replace(/-/g,"+").replace(/_/g,"/");return JSON.parse(decodeURIComponent(escape(atob(s))))}
+let draft={};try{if(qs.get("d"))draft=b64d(qs.get("d"))}catch(e){}
+let wallet="",createQ=null,imageUrl="",busy=false;
+const say=(t,c="")=>{$("msg").className="msg "+c;$("msg").textContent=t};
+async function api(path,body){const r=await fetch("/api/panta/"+path,{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify(body||{})});
+ const t=await r.text();let j;try{j=JSON.parse(t)}catch{j=t}
+ if(!r.ok){let m;if(typeof j==="string")m=j.slice(0,160);else{const v=j&&(j.detail??j.message??j.code??j.error);m=typeof v==="string"?v:v?JSON.stringify(v).slice(0,220):""}throw new Error((m||"Request failed")+" (HTTP "+r.status+")")}return j}
+function getProvider(){const p=window.phantom&&window.phantom.solana;if(p&&p.isPhantom)return p;if(window.solana&&window.solana.isPhantom)return window.solana;if(window.solflare&&window.solflare.isSolflare)return window.solflare;return null}
+// fill the form from the bot's draft
+(function(){const now=Date.now();
+ $("q").value=draft.q||"";$("r").value=draft.r||"";$("s").value=(draft.s||[]).join("\n");
+ if(["crypto","sports","politics","entertainment"].includes(draft.c))$("c").value=draft.c;
+ $("a").value=toLocal(new Date(draft.a?Math.max(new Date(draft.a).getTime(),now+75*60000):now+75*60000));
+ $("b").value=toLocal(new Date(draft.b?new Date(draft.b):now+2*86400000));
+ $("x").value=toLocal(new Date(draft.x?new Date(draft.x):now+2*86400000+7200000));
+ if(!draft.q)say("Tip: draft a market with /call in the Telegram bot, then tap Create this market. You can also fill this form by hand.");
+})();
+function readForm(){
+ const q=$("q").value.trim(),r=$("r").value.trim(),s=$("s").value.split(/[\n,]/).map(x=>x.trim()).filter(Boolean);
+ if(q.length<10)throw new Error("Write the question first (at least 10 characters).");
+ if(!r)throw new Error("Add a resolution rule that says exactly when the answer is YES or NO.");
+ if(!s.length||s.some(u=>!/^https:\/\//.test(u)))throw new Error("Add at least one source, each starting with https://");
+ let a=unix($("a").value),b=unix($("b").value),x=unix($("x").value);const now=Math.floor(Date.now()/1000);
+ if(a<now+3660){a=now+3660;$("a").value=toLocal(new Date(a*1000));$("warn").textContent="Trading must open at least an hour from now, so I moved the start time.";$("warn").hidden=false}
+ if(!(a<b))throw new Error("Trading must close after it opens.");if(!(b<=x))throw new Error("The result time must be at or after the close time.");
+ return{question:q,resolutionRule:r,sourcesOfTruth:s,category:$("c").value,startTime:a,endTime:b,resolutionTime:x};
+}
+function wrap(ctx,text,maxW){const words=text.split(/\s+/),lines=[];let l="";for(const w of words){const t=l?l+" "+w:w;if(ctx.measureText(t).width>maxW&&l){lines.push(l);l=w}else l=t}if(l)lines.push(l);return lines}
+function makeImage(question,category){const cv=$("cv"),c=cv.getContext("2d");
+ const g=c.createRadialGradient(300,200,60,512,512,820);g.addColorStop(0,"#3b2a9a");g.addColorStop(1,"#0b0820");c.fillStyle=g;c.fillRect(0,0,1024,1024);
+ c.fillStyle="#bfff46";c.beginPath();c.roundRect(72,72,200,56,28);c.fill();c.fillStyle="#10130a";c.font="700 28px system-ui,sans-serif";c.textAlign="center";c.fillText(category.toUpperCase(),172,110);
+ c.textAlign="left";c.fillStyle="#f2efff";let size=76,lines;for(;size>=40;size-=4){c.font="800 "+size+"px system-ui,sans-serif";lines=wrap(c,question,880);if(lines.length*size*1.18<560)break}
+ lines.slice(0,7).forEach((ln,i)=>c.fillText(ln,72,230+i*size*1.18));
+ c.fillStyle="#bfff46";c.font="800 40px system-ui,sans-serif";c.fillText("YES",72,880);c.fillStyle="#9a93c4";c.fillText("or",190,880);c.fillStyle="#a98bff";c.fillText("NO?",250,880);
+ c.fillStyle="#9a93c4";c.font="600 28px system-ui,sans-serif";c.fillText("I-Called-It  -  Powered by Panta",72,960);
+ cv.hidden=false;return new Promise(res=>cv.toBlob(res,"image/png"))}
+async function uploadImage(blob){const up=await api("markets/create/image-upload",{});
+ if(!up.uploadUrl||!up.fields)throw new Error("Image upload was not set up by Panta.");
+ const fd=new FormData();for(const[k,v]of Object.entries(up.fields))if(v!=null)fd.append(k,String(v));fd.append("file",blob,"market.png");
+ const r=await fetch(up.uploadUrl,{method:"POST",body:fd}),j=await r.json().catch(()=>({}));
+ if(!r.ok||!j.secure_url)throw new Error((j.error&&j.error.message)||"Image upload failed.");return j.secure_url}
+
+$("go").onclick=async()=>{if(busy)return;busy=true;try{
+ const p=getProvider();
+ if(!p){say("No Solana wallet found. Opening this page inside Phantom...","err");location.href="https://phantom.app/ul/browse/"+encodeURIComponent(location.href)+"?ref="+encodeURIComponent(location.origin);return}
+ if(!wallet){const r=await p.connect();wallet=String((r&&r.publicKey)||p.publicKey);$("go").textContent="Get the fee";say("Wallet connected: "+wallet.slice(0,4)+"..."+wallet.slice(-4),"ok");return}
+ const f=readForm();$("go").disabled=true;
+ say("Making your market image...");const blob=await makeImage(f.question,f.category);
+ say("Uploading the image...");imageUrl=await uploadImage(blob);
+ say("Asking Panta for the exact fee...");
+ createQ=await api("markets/create/quote",{wallet,...f,marketType:"standard",title:f.question,description:"",imageUrl,region:"Global"});
+ const pay=usdc(createQ.paymentUsdc),liq=usdc(createQ.liquidityInjectionUsdc),plat=usdc(createQ.platformRevenueUsdc);
+ $("sum").innerHTML="<div><span>You pay in total</span><b>"+money(pay)+"</b></div>"+(plat!=null?"<div><span>Panta platform fee</span><b>"+money(plat)+"</b></div>":"")+(liq!=null?"<div><span>Starting liquidity</span><b>"+money(liq)+"</b></div>":"")+"<div><span>Opens for trading</span><b>"+new Date(f.startTime*1000).toUTCString().slice(5,22)+" UTC</b></div>";
+ $("sum").hidden=false;$("confirm").hidden=false;say("Quote ready. Check the amount, then confirm. This quote expires in a few minutes.");
+}catch(e){say(e.message||String(e),"err")}finally{busy=false;$("go").disabled=false}};
+
+$("confirm").onclick=async()=>{if(busy)return;busy=true;const p=getProvider();try{
+ if(!createQ)return say("Get the fee first.","err");
+ if(createQ.expiresAt&&new Date(createQ.expiresAt)<new Date(Date.now()+5000)){$("confirm").hidden=true;return say("That quote expired. Tap Get the fee again.","err")}
+ $("confirm").disabled=true;say("Preparing the transaction...");
+ const b=await api("markets/create/build",{createId:createQ.createId,wallet});
+ if(!b.transaction)throw new Error("Panta did not return a transaction.");
+ const bytes=Uint8Array.from(atob(b.transaction),c=>c.charCodeAt(0));
+ const tx=solanaWeb3.VersionedTransaction.deserialize(bytes);
+ if(DRY){say("Dry run OK: Panta built the creation transaction ("+bytes.length+" bytes) for "+money(usdc(b.paymentUsdc||createQ.paymentUsdc))+". Nothing was signed or sent.","ok");return}
+ say("Approve the transaction in your wallet...");
+ const res=await p.signAndSendTransaction(tx),sig=res&&res.signature?res.signature:res;
+ say("Sent. Registering your market with Panta...");
+ let reg=null,lastErr;
+ for(let i=0;i<8&&!reg;i++){try{reg=await api("markets/register",{createId:createQ.createId,signature:sig})}catch(e){lastErr=e;await new Promise(r=>setTimeout(r,4000))}}
+ $("sum").hidden=true;$("confirm").hidden=true;
+ if(!reg)throw new Error("Your payment was sent but registration is still pending. Save this code and try again in a minute: "+sig.slice(0,12)+"... ("+(lastErr&&lastErr.message)+")");
+ $("msg").className="msg ok";$("msg").innerHTML='Your market is live! <a style="color:#bfff46" href="/trade?market='+encodeURIComponent(reg.marketId)+'">Open it and trade</a>';
+}catch(e){say(e.message||String(e),"err")}finally{busy=false;$("confirm").disabled=false}};
+</script></body></html>
