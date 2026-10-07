@@ -118,7 +118,7 @@ async function loadMarket() {
     $("market").innerHTML = "<h1></h1><div class='bar'><div class='y' style='flex:" + Math.max(yp, 8) + "'>YES " + yp + "%</div><div class='n' style='flex:" + Math.max(np, 8) + "'>NO " + np + "%</div></div><div class='mut'></div>";
     $("market").querySelector("h1").textContent = q;
     $("market").querySelector(".mut").textContent = (end ? "Closes " + end.toUTCString().replace(" GMT", " UTC") : "") + (market.volumeUsdc ? " - volume " + money(market.volumeUsdc) : "");
-    if (closed) { $("market").insertAdjacentHTML("beforeend", "<div class='msg err'>Trading is closed for this market.</div>"); return; }
+    if (closed) { const ph = String(market.phase || market.status || "").toLowerCase(); $("market").insertAdjacentHTML("beforeend", ph === "secondary" ? "<div class='msg'>This market is in its secondary phase, which can't be bought through the Panta API yet. <a href='https://www.panta.market/' target='_blank' rel='noopener' style='color:#bfff46'>Trade it on panta.market</a>.</div>" : "<div class='msg err'>Trading is closed for this market.</div>"); return; }
     $("buy").hidden = false;
     if (/sandbox|fixture/i.test(JSON.stringify(market).slice(0, 2000))) say("Test data: this is a sandbox market, nothing real can be bought.", "err");
   } catch (e) { $("market").innerHTML = "<h1>Could not load this market</h1><div class='msg err'></div>"; $("market").querySelector(".err").textContent = e.message; }

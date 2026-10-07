@@ -1,5 +1,6 @@
 {
   "cleanUrls": true,
+  "functions": { "api/telegram.js": { "maxDuration": 60 } },
   "rewrites": [
     { "source": "/api/panta/:path*", "destination": "/api/panta?path=:path*" }
   ]

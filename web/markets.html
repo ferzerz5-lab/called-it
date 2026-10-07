@@ -13,20 +13,20 @@ async function pool(items,n,fn){const out=[];let i=0;await Promise.all(Array.fro
  try{
   const lists=await Promise.all(["","crypto","politics","sports","entertainment"].map(listCat));
   const seen=new Map();lists.flat().forEach(b=>seen.set(b.marketId||b.id,b));
-  const open=[...seen.values()].filter(b=>String(b.phase||b.status||"").toLowerCase()==="primary").slice(0,30);
+  const open=[...seen.values()].filter(b=>["primary","secondary"].includes(String(b.phase||b.status||"").toLowerCase())).slice(0,30);
   const full=await pool(open,6,async b=>{try{return{...b,...(await api("markets/"+encodeURIComponent(b.marketId||b.id)))}}catch{return b}});
   const rows=full.map(m=>{const q=(m.onChain&&m.onChain.question)||(m.title||"").trim()||(m.description||"").trim();const end=toDate((m.onChain&&m.onChain.endTime)||m.endTime);
-   return{id:m.marketId||m.id,q,y:num(m.yesPrice??m.primaryYesPrice),n:num(m.noPrice??m.primaryNoPrice),end,vol:num(m.volumeUsdc),resolved:m.resolved===true}})
+   return{id:m.marketId||m.id,q,y:num(m.yesPrice??m.primaryYesPrice),n:num(m.noPrice??m.primaryNoPrice),end,vol:num(m.volumeUsdc),resolved:m.resolved===true,ph:String(m.phase||m.status||"").toLowerCase()}})
    .filter(m=>m.q&&!m.resolved&&(!m.end||m.end>new Date())).sort((a,b)=>(b.vol||0)-(a.vol||0));
   const box=$("list");box.innerHTML="";
-  if(!rows.length){box.innerHTML='<div class="msg">No open markets right now. Create one from the Telegram bot with /call.</div>';return}
+  if(!rows.length){box.innerHTML='<div class="msg">No open markets right now. <a href="/create">Create one</a>, or draft it with /call in the Telegram bot.</div>';return}
   rows.forEach(m=>{const yp=m.y!=null?Math.round(m.y*100):50,np=m.n!=null?Math.round(m.n*100):100-yp;
    const c=document.createElement("div");c.className="card";
    c.innerHTML='<h3></h3><div class="bar"><div class="y"></div><div class="n"></div></div><div class="mut"></div><div style="margin-top:14px"><a class="btn">Trade</a></div>';
    c.querySelector("h3").textContent=m.q;
    const y=c.querySelector(".y"),n=c.querySelector(".n");y.style.flex=Math.max(yp,8);n.style.flex=Math.max(np,8);y.textContent="YES "+yp+"%";n.textContent="NO "+np+"%";
    c.querySelector(".mut").textContent=(m.end?"Closes "+m.end.toUTCString().replace(" GMT"," UTC"):"")+(m.vol!=null?" - volume $"+m.vol.toFixed(2):"");
-   c.querySelector("a").href="/trade?market="+encodeURIComponent(m.id);box.appendChild(c)});
+   const bt=c.querySelector("a");if(m.ph==="secondary"){bt.textContent="View on Panta";bt.className="btn alt";bt.href="https://www.panta.market/";bt.target="_blank";bt.rel="noopener";c.querySelector(".mut").textContent+=" - secondary phase: trade it on panta.market"}else{bt.href="/trade?market="+encodeURIComponent(m.id)}box.appendChild(c)});
  }catch(e){$("list").innerHTML='<div class="msg err">Could not load markets. Please try again in a moment.</div>'}
 })();
 </script>
