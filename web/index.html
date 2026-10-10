@@ -1,21 +1,80 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>I-Called-It - turn group-chat arguments into live odds</title><link rel="stylesheet" href="/style.css"></head><body><div class="wrap">
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>I-Called-It - everyone in the chat is sure, make them prove it</title><link rel="stylesheet" href="/style.css"><style>
+:root{--paper:#f4efe3;--pt:#1b1730;--mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace}
+body{background:#0c0a1d}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.07;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+.kick{font:700 13px var(--mono);letter-spacing:.14em;color:var(--lime);margin:34px 0 0}
+.wrap{max-width:1120px}.hero{display:grid;grid-template-columns:1.12fr .88fr;gap:30px;align-items:center;padding-bottom:20px}
+.hero h1{font-size:clamp(38px,5.2vw,68px);line-height:1.02;letter-spacing:-.035em;margin:14px 0 18px}
+.hero h1 em{font-style:normal;color:var(--pt);background:var(--lime);padding:0 .14em;border-radius:10px;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+.hero p.sub{font-size:20px;color:#cfc9ee;max-width:520px}
+.hero .cta{margin:26px 0 12px}.tiny{font:500 13px var(--mono);color:var(--mut)}
+.phones{position:relative;height:600px}
+.ph{position:absolute;width:262px;border:8px solid #221c45;border-radius:38px;box-shadow:0 40px 90px #05030f;display:block}
+.p1{left:0;top:150px;transform:rotate(-5deg);animation:fl 7s ease-in-out infinite}
+.p2{right:0;top:10px;transform:rotate(4deg);animation:fl 8s ease-in-out infinite reverse}
+@keyframes fl{0%,100%{translate:0 0}50%{translate:0 -10px}}
+.stamp{position:absolute;left:46%;top:540px;border:4px solid var(--lime);color:var(--lime);background:#0c0a1d;padding:8px 18px;border-radius:10px;font:800 26px/1 var(--mono);letter-spacing:.08em;white-space:nowrap;transform:rotate(-9deg);animation:th .5s .4s both}
+@keyframes th{from{opacity:0;transform:rotate(-9deg) scale(2)}to{opacity:1;transform:rotate(-9deg) scale(1)}}
+h2.sec{font-size:clamp(30px,4.4vw,48px);letter-spacing:-.025em;line-height:1.05;margin:84px 0 10px;max-width:760px}
+p.lead2{color:#bdb7e0;max-width:620px;font-size:18px;margin:0 0 26px}
+.tix{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.tk{position:relative;color:var(--pt);padding:26px 26px 24px;border-radius:16px;
+ background:radial-gradient(circle at 0 62%,transparent 13px,var(--paper) 14px) left/51% 100% no-repeat,radial-gradient(circle at 100% 62%,transparent 13px,var(--paper) 14px) right/51% 100% no-repeat}
+.tk .lab{font:700 12px var(--mono);letter-spacing:.14em;color:#6f6893;margin:0 0 12px;border-bottom:2px dashed #cfc7ae;padding-bottom:12px}
+.tk .big{font-size:24px;font-weight:700;line-height:1.2;margin:0 0 12px}
+.tk .mono{font:500 15px/1.5 var(--mono);color:#3a345c;margin:0}
+.yn{display:flex;height:34px;border-radius:9px;overflow:hidden;font:700 13px var(--mono);margin:6px 0 12px}
+.yn b{display:flex;align-items:center;justify-content:center}.yn .y{flex:52;background:var(--lime);color:#10130a}.yn .n{flex:48;background:#8b5cf6;color:#fff}
+.dots{display:flex;gap:10px;margin:2px 0 14px}.dots i{width:34px;height:34px;border-radius:50%;background:var(--lime);border:3px solid var(--pt);display:block}
+.cost{display:grid;grid-template-columns:auto 1fr;gap:44px;align-items:center;margin:90px 0 0}
+.cost .num2{font:800 clamp(96px,17vw,210px)/.85 var(--mono);color:var(--lime);letter-spacing:-.06em}
+.cost p{font-size:24px;line-height:1.35;color:#e6e2fb;max-width:520px;margin:0 0 12px}.cost small{display:block;font:500 14px var(--mono);color:var(--mut)}
+.rcpt{max-width:560px;color:var(--pt);padding:34px 34px 30px;border-radius:6px;transform:rotate(-1.2deg);margin:0 0 0;
+ background:var(--paper);box-shadow:0 30px 70px #05030f;
+ -webkit-mask:radial-gradient(circle 9px at 9px 100%,#0000 98%,#000) bottom/18px 18px repeat-x,linear-gradient(#000 0 0) top/100% calc(100% - 18px) no-repeat;
+ mask:radial-gradient(circle 9px at 9px 100%,#0000 98%,#000) bottom/18px 18px repeat-x,linear-gradient(#000 0 0) top/100% calc(100% - 18px) no-repeat}
+.rcpt h3{font:800 17px var(--mono);letter-spacing:.12em;text-align:center;margin:0 0 4px}.rcpt .sm{font:500 12px var(--mono);text-align:center;color:#6f6893;margin:0 0 18px}
+.ln{display:flex;align-items:baseline;gap:8px;font:500 15px/1.9 var(--mono)}.ln:after{order:2;content:"";flex:1;border-bottom:2px dotted #b9b19a;transform:translateY(-4px)}
+.ln span{order:1}.ln b{order:3}.ok{color:#0e7a3b}.no{color:#a33}.wip{color:#8a5a00}
+.rcpt .ty{font:700 13px var(--mono);letter-spacing:.14em;text-align:center;margin:20px 0 0;color:#6f6893}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:50px;align-items:center}
+@media(max-width:820px){.hero,.two,.cost{grid-template-columns:1fr}.tix{grid-template-columns:1fr}.phones{height:560px}.ph{width:230px}.p1{left:0;top:130px}.stamp{left:40%;top:520px}}
+@media(prefers-reduced-motion:reduce){.p1,.p2,.stamp{animation:none}}
+</style></head><body><div class="wrap">
 <nav><a class="brand" href="/"><svg viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#bfff46"/><path d="M12 16h40a8 8 0 0 1 8 8v16a8 8 0 0 1-8 8H30l-10 9 2-9h-10a8 8 0 0 1-8-8V24a8 8 0 0 1 8-8z" transform="translate(-4 -3) scale(.95)" fill="#0b0820"/><path d="M20 31l8 8 16-16" fill="none" stroke="#bfff46" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>I-Called-It</a><div class="links"><a href="/markets">Markets</a><a href="/create">Create</a><a href="/how">How it works</a><a class="btn" href="https://t.me/ICalledItBot" target="_blank" rel="noopener">Open the bot</a></div></nav>
-<h1>Turn group-chat arguments into <span style="color:var(--lime)">live odds</span>.</h1>
-<p class="lead">I-Called-It brings Panta prediction markets into your Telegram group. Find a live market, back YES or NO with your own wallet, and see who really called it.</p>
-<div class="cta"><a class="btn" href="https://t.me/ICalledItBot" target="_blank" rel="noopener">Open the Telegram bot</a><a class="btn alt" href="/markets">Browse live markets</a></div>
-<h2>How it works</h2>
-<div class="grid">
-<div class="card"><div class="num">1</div><h3>Ask the bot</h3><p>Type <b>/odds bitcoin</b> in any chat to find live markets, or <b>/call</b> to have AI draft a new market from a claim.</p></div>
-<div class="card"><div class="num">2</div><h3>Trade with your wallet</h3><p>Tap Trade, connect Phantom, review the quote, and sign. You stay in control of your funds.</p></div>
-<div class="card"><div class="num">3</div><h3>Claim if you called it</h3><p>Panta resolves each market from public sources. Winners claim their payout.</p></div></div>
-<h2>What is here</h2>
-<div class="grid">
-<div class="card"><h3>Telegram bot <span class="tag live">Live</span></h3><p>/odds finds real Panta markets. /call drafts a clear YES/NO market from a casual claim.</p></div>
-<div class="card"><h3>Markets <span class="tag live">Live</span></h3><p>Every open market with its odds, close time and volume, straight from Panta.</p></div>
-<div class="card"><h3>Trade page <span class="tag live">Live</span></h3><p>Quote, sign and report a trade in under a minute, on a phone or laptop.</p></div>
-<div class="card"><h3>Group leaderboard <span class="tag soon">Coming soon</span></h3><p>Who in your group backs the right side most often. Shown only when real trades exist.</p></div></div>
-<h2>Built to be honest</h2>
-<div class="grid"><div class="card"><h3>Non-custodial</h3><p>We never hold money. Every trade is signed in your own wallet.</p></div>
-<div class="card"><h3>Clear rules</h3><p>The AI refuses claims that no public website can settle, such as opinions and private bets.</p></div></div>
+<p class="kick">I-CALLED-IT / GROUP-CHAT ODDS ON PANTA</p>
+<div class="hero"><div>
+<h1>Everyone in the chat is sure. <em>Make them prove it.</em></h1>
+<p class="sub">Drop a claim in your Telegram group. The bot turns it into a real prediction market on Panta, and your group decides if it is worth making.</p>
+<div class="cta"><a class="btn" href="https://t.me/ICalledItBot" target="_blank" rel="noopener">Open the bot</a> &nbsp; <a class="btn alt" href="/markets">See live markets</a></div>
+<p class="tiny">Browsing and drafting are free. You only pay when you create or trade.</p></div>
+<div class="phones"><img class="ph p1" src="/img/phone_draft.jpg" alt="The bot drafting a Bitcoin market with a group vote"><img class="ph p2" src="/img/phone_odds.jpg" alt="The bot listing live Panta markets"><span class="stamp">CALLED IT &#10003;</span></div></div>
+
+<h2 class="sec">From a chat message to a market, in three steps</h2>
+<p class="lead2">This is a real example, word for word from the bot.</p>
+<div class="tix">
+<div class="tk"><p class="lab">01 / THE CLAIM</p><p class="big">Someone says it in the group.</p><p class="mono">/call Bitcoin above $100k by end of the year</p></div>
+<div class="tk"><p class="lab">02 / THE MARKET</p><p class="big">Will Bitcoin be above $100,000 on December 31, 2026?</p><div class="yn"><b class="y" style="flex:1">YES</b><b class="n" style="flex:1">NO</b></div><p class="mono">AI writes the rule. Source: CoinGecko, daily close. Odds appear once people trade. Anything that can't be checked on a website gets turned down.</p></div>
+<div class="tk"><p class="lab">03 / THE VOTE</p><p class="big">The group decides before anyone pays.</p><div class="dots"><i></i><i></i><i></i></div><p class="mono">Three people tap 👍 and the Create button unlocks.</p></div></div>
+
+<div class="cost"><div class="num2">$50</div><div><p>That is what Panta charges to create one market: $40 in fees and $10 of starting liquidity. It is exactly why the group votes first.</p><small>Shown in full before you sign. Nothing is paid until you approve it in your own wallet.</small></div></div>
+
+<div class="two" style="margin-top:96px"><div><h2 class="sec" style="margin-top:0">No smoke, just a receipt.</h2><p class="lead2">Here is what works today and what does not. We would rather tell you than let you find out.</p><a class="btn alt" href="/status">Read the full status</a></div>
+<div class="rcpt"><h3>I-CALLED-IT</h3><p class="sm">RECEIPT No. 001 / OCT 2026</p>
+<div class="ln"><span>Telegram bot, 24/7</span><b class="ok">LIVE</b></div>
+<div class="ln"><span>Live Panta markets</span><b class="ok">LIVE</b></div>
+<div class="ln"><span>AI market writer</span><b class="ok">LIVE</b></div>
+<div class="ln"><span>Group vote</span><b class="ok">LIVE</b></div>
+<div class="ln"><span>Create: $50 quote + built transaction</span><b class="ok">LIVE</b></div>
+<div class="ln"><span>Signed trade, end to end</span><b class="wip">NOT YET</b></div>
+<div class="ln"><span>Group leaderboard</span><b class="no">NOT YET</b></div>
+<p class="ty">THANK YOU. POWERED BY PANTA.</p></div></div>
+
+<div style="margin-top:84px"><h2 id="faq">Questions people ask</h2><div class="faq"><details><summary>Do I need a wallet just to look around?</summary><p>No. Browsing markets, searching with /odds and drafting with /call need nothing. You only need a Solana wallet such as Phantom when you create a market or buy.</p></details><details><summary>Does I-Called-It ever hold my money?</summary><p>Never. Every payment is signed in your own wallet, and we never see your keys or recovery phrase. The app only builds the transaction and asks your wallet to approve it.</p></details><details><summary>Why does creating a market cost about $50?</summary><p>That is Panta&#x27;s fee, not ours: $40 platform fee plus $10 of starting liquidity. The exact amount is shown before you sign. It is also why each draft has a group vote, so nobody pays for a market nobody wants.</p></details><details><summary>Why did the bot refuse my claim?</summary><p>A market has to be settled by a public website, so opinions, jokes, private bets and anything about harming someone are turned down. The bot explains why and suggests a version that can work.</p></details><details><summary>Is the market data live?</summary><p>Yes, it comes straight from Panta. Some markets are in a secondary phase that Panta&#x27;s API cannot buy into, so we label them and link to panta.market. At times there is nothing open to buy at all.</p></details><details><summary>Can I really trade right now?</summary><p>The buy flow is built and works up to the wallet signature. A complete signed trade has not been verified end to end yet, because that needs a funded wallet, and your wallet may warn about a new site until it is reviewed. The Honest status page lists exactly what is checked.</p></details><details><summary>How does the group vote work?</summary><p>Each person taps once to say they would trade it, and taps again to take the vote back. In a group, the Create button unlocks after three people agree. In a private chat, one tap is enough.</p></details><details><summary>Who decides if a market is YES or NO?</summary><p>Panta resolves it from the public sources named when the market was created. That is why the bot writes a precise rule and picks sources anyone can check.</p></details></div></div>
 <script>var m=new URLSearchParams(location.search).get("market");if(m)location.replace("/trade?market="+encodeURIComponent(m)+(location.search.indexOf("dry=")>-1?"&dry=1":""));</script>
-<footer>Prediction markets involve risk. Only use money you can afford to lose. I-Called-It never holds your funds.<br>Powered by <a href="https://panta.market" target="_blank" rel="noopener">Panta</a></footer></div></body></html>
+<footer class="foot"><div class="fgrid">
+<div class="fbrand"><a class="brand" href="/"><svg viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#bfff46"/><path d="M12 16h40a8 8 0 0 1 8 8v16a8 8 0 0 1-8 8H30l-10 9 2-9h-10a8 8 0 0 1-8-8V24a8 8 0 0 1 8-8z" transform="translate(-4 -3) scale(.95)" fill="#0b0820"/><path d="M20 31l8 8 16-16" fill="none" stroke="#bfff46" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>I-Called-It</a><p>Group-chat odds on Panta. Argue less, call it more.</p></div>
+<div><h4>Explore</h4><a href="/markets">Markets</a><a href="/create">Create a market</a><a href="https://t.me/ICalledItBot" target="_blank" rel="noopener">Open the bot</a><a href="https://github.com/ferzerz5-lab/called-it" target="_blank" rel="noopener">Source code</a></div>
+<div><h4>Resources</h4><a href="/how">How it works</a><a href="/#faq">Questions and answers</a><a href="https://github.com/ferzerz5-lab/called-it/issues" target="_blank" rel="noopener">Report an issue</a></div>
+<div><h4>Transparency</h4><a href="/status">Honest status</a><a href="/risk">Risk</a><a href="/privacy">Privacy</a></div></div>
+<p class="fnote">Prediction markets involve risk. Only use money you can afford to lose. I-Called-It never holds your funds.<br>Powered by <a href="https://panta.market" target="_blank" rel="noopener" style="color:var(--lime)">Panta</a></p></footer></div></body></html>
