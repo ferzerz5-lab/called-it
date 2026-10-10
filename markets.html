@@ -1,0 +1,38 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>Live markets - I-Called-It</title><link rel="stylesheet" href="/style.css"></head><body><div class="wrap">
+<nav><a class="brand" href="/"><svg viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#bfff46"/><path d="M12 16h40a8 8 0 0 1 8 8v16a8 8 0 0 1-8 8H30l-10 9 2-9h-10a8 8 0 0 1-8-8V24a8 8 0 0 1 8-8z" transform="translate(-4 -3) scale(.95)" fill="#0b0820"/><path d="M20 31l8 8 16-16" fill="none" stroke="#bfff46" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>I-Called-It</a><div class="links"><a href="/markets" class=on>Markets</a><a href="/create">Create</a><a href="/how">How it works</a><a class="btn" href="https://t.me/ICalledItBot" target="_blank" rel="noopener">Open the bot</a></div></nav>
+<h1>Live markets</h1><p class="lead">Open Panta markets right now. Tap one to trade.</p>
+<div id="list" class="grid" style="margin-top:22px"><div class="msg">Loading markets...</div></div>
+<script>
+const $=id=>document.getElementById(id);
+const num=v=>(v===null||v===undefined||v===""||!isFinite(Number(v))?null:Number(v));
+const toDate=v=>{if(!v)return null;const n=Number(v);return isFinite(n)?new Date(n<1e12?n*1000:n):new Date(v)};
+async function api(p){const r=await fetch("/api/panta/"+p);const t=await r.text();let j;try{j=JSON.parse(t)}catch{j=t}if(!r.ok)throw new Error("HTTP "+r.status);return j}
+async function listCat(c){const cat=c?"&category="+c:"";for(const q of ["markets?limit=100&status=primary"+cat,"markets?limit=50"+cat]){try{const j=await api(q);return j.items||j.results||[]}catch(e){}}return[]}
+async function pool(items,n,fn){const out=[];let i=0;await Promise.all(Array.from({length:n},async()=>{while(i<items.length){const x=items[i++];out.push(await fn(x))}}));return out}
+(async()=>{
+ try{
+  const lists=await Promise.all(["","crypto","politics","sports","entertainment"].map(listCat));
+  const seen=new Map();lists.flat().forEach(b=>seen.set(b.marketId||b.id,b));
+  const open=[...seen.values()].filter(b=>["primary","secondary"].includes(String(b.phase||b.status||"").toLowerCase())).slice(0,30);
+  const full=await pool(open,6,async b=>{try{return{...b,...(await api("markets/"+encodeURIComponent(b.marketId||b.id)))}}catch{return b}});
+  const rows=full.map(m=>{const q=(m.onChain&&m.onChain.question)||(m.title||"").trim()||(m.description||"").trim();const end=toDate((m.onChain&&m.onChain.endTime)||m.endTime);
+   return{id:m.marketId||m.id,q,y:num(m.yesPrice??m.primaryYesPrice),n:num(m.noPrice??m.primaryNoPrice),end,vol:num(m.volumeUsdc),resolved:m.resolved===true,ph:String(m.phase||m.status||"").toLowerCase()}})
+   .filter(m=>m.q&&!m.resolved&&(!m.end||m.end>new Date())).sort((a,b)=>(b.vol||0)-(a.vol||0));
+  const box=$("list");box.innerHTML="";
+  if(!rows.length){box.innerHTML='<div class="msg">No open markets right now. <a href="/create">Create one</a>, or draft it with /call in the Telegram bot.</div>';return}
+  rows.forEach(m=>{const yp=m.y!=null?Math.round(m.y*100):50,np=m.n!=null?Math.round(m.n*100):100-yp;
+   const c=document.createElement("div");c.className="card";
+   c.innerHTML='<h3></h3><div class="bar"><div class="y"></div><div class="n"></div></div><div class="mut"></div><div style="margin-top:14px"><a class="btn">Trade</a></div>';
+   c.querySelector("h3").textContent=m.q;
+   const y=c.querySelector(".y"),n=c.querySelector(".n");y.style.flex=Math.max(yp,8);n.style.flex=Math.max(np,8);y.textContent="YES "+yp+"%";n.textContent="NO "+np+"%";
+   c.querySelector(".mut").textContent=(m.end?"Closes "+m.end.toUTCString().replace(" GMT"," UTC"):"")+(m.vol!=null?" - volume $"+m.vol.toFixed(2):"");
+   const bt=c.querySelector("a");if(m.ph==="secondary"){bt.textContent="View on Panta";bt.className="btn alt";bt.href="https://www.panta.market/";bt.target="_blank";bt.rel="noopener";c.querySelector(".mut").textContent+=" - secondary phase: trade it on panta.market"}else{bt.href="/trade?market="+encodeURIComponent(m.id)}box.appendChild(c)});
+ }catch(e){$("list").innerHTML='<div class="msg err">Could not load markets. Please try again in a moment.</div>'}
+})();
+</script>
+<footer class="foot"><div class="fgrid">
+<div class="fbrand"><a class="brand" href="/"><svg viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#bfff46"/><path d="M12 16h40a8 8 0 0 1 8 8v16a8 8 0 0 1-8 8H30l-10 9 2-9h-10a8 8 0 0 1-8-8V24a8 8 0 0 1 8-8z" transform="translate(-4 -3) scale(.95)" fill="#0b0820"/><path d="M20 31l8 8 16-16" fill="none" stroke="#bfff46" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>I-Called-It</a><p>Group-chat odds on Panta. Argue less, call it more.</p></div>
+<div><h4>Explore</h4><a href="/markets">Markets</a><a href="/create">Create a market</a><a href="https://t.me/ICalledItBot" target="_blank" rel="noopener">Open the bot</a><a href="https://github.com/ferzerz5-lab/called-it" target="_blank" rel="noopener">Source code</a></div>
+<div><h4>Resources</h4><a href="/how">How it works</a><a href="/#faq">Questions and answers</a><a href="https://github.com/ferzerz5-lab/called-it/issues" target="_blank" rel="noopener">Report an issue</a></div>
+<div><h4>Transparency</h4><a href="/status">Honest status</a><a href="/risk">Risk</a><a href="/privacy">Privacy</a></div></div>
+<p class="fnote">Prediction markets involve risk. Only use money you can afford to lose. I-Called-It never holds your funds.<br>Powered by <a href="https://panta.market" target="_blank" rel="noopener" style="color:var(--lime)">Panta</a></p></footer></div></body></html>

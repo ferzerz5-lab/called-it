@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>I-Called-It - trade</title>
+<style>
+:root{--ink:#0b0820;--card:#15112e;--line:#2a2352;--lime:#bfff46;--vio:#7c3aed;--txt:#f2efff;--mut:#9a93c4;--bad:#ff6b81}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(120% 60% at 20% 0%,#2a1a6e 0%,var(--ink) 60%);color:var(--txt);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;min-height:100vh}
+.app{max-width:460px;margin:0 auto;padding:18px 16px 40px}
+header{display:flex;align-items:center;gap:10px;margin-bottom:16px;font-weight:700}
+header svg{width:34px;height:34px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:14px}
+h1{font-size:19px;line-height:1.3;margin:0 0 10px}
+.mut{color:var(--mut);font-size:13px}
+.bar{display:flex;height:34px;border-radius:10px;overflow:hidden;margin:12px 0 6px;font-weight:700;font-size:14px}
+.bar div{display:flex;align-items:center;justify-content:center;min-width:44px}
+.y{background:var(--lime);color:#10130a}.n{background:var(--vio);color:#fff}
+.sides{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.side{padding:14px;border-radius:12px;border:2px solid var(--line);background:transparent;color:var(--txt);font-weight:700;font-size:16px;cursor:pointer}
+.side.on.yes{border-color:var(--lime);background:#bfff4622}.side.on.no{border-color:var(--vio);background:#7c3aed33}
+.amts{display:flex;gap:8px;margin-bottom:12px}
+.amts button{flex:1;padding:10px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--txt);cursor:pointer}
+.amts button.on{border-color:var(--lime)}
+input{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:#0e0a26;color:var(--txt);font-size:16px}
+.btn{width:100%;margin-top:12px;padding:15px;border:0;border-radius:12px;background:var(--lime);color:#10130a;font-weight:800;font-size:16px;cursor:pointer}
+.btn.alt{background:transparent;border:1px solid var(--line);color:var(--txt)}
+.btn:disabled{opacity:.5}
+.sum{margin-top:12px;padding:12px;border-radius:12px;background:#0e0a26;font-size:14px}
+.sum div{display:flex;justify-content:space-between;padding:2px 0}
+.msg{margin-top:12px;font-size:14px}.err{color:var(--bad)}.ok{color:var(--lime)}
+footer{text-align:center;color:var(--mut);font-size:13px;margin-top:18px}footer a,.pp a{color:var(--lime)}
+.pp{text-align:center;color:var(--mut);font-size:12px;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <svg viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#bfff46"/><path d="M12 16h40a8 8 0 0 1 8 8v16a8 8 0 0 1-8 8H30l-10 9 2-9h-10a8 8 0 0 1-8-8V24a8 8 0 0 1 8-8z" transform="translate(-4 -3) scale(.95)" fill="#0b0820"/><path d="M20 31l8 8 16-16" fill="none" stroke="#bfff46" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <a href="/" style="color:inherit;text-decoration:none">I-Called-It</a>
+    <a href="/markets" style="margin-left:auto;color:var(--lime);font-weight:600;font-size:14px;text-decoration:none">All markets</a>
+  </header>
+
+  <section class="card" id="market"><div class="mut">Loading market...</div></section>
+
+  <section class="card" id="buy" hidden>
+    <div class="mut">Pick a side</div>
+    <div class="sides">
+      <button class="side yes on" data-side="yes" id="sy">YES</button>
+      <button class="side no" data-side="no" id="sn">NO</button>
+    </div>
+    <div class="mut">Amount (USDC)</div>
+    <div class="amts" id="amts"><button data-a="1">$1</button><button data-a="5">$5</button><button data-a="10">$10</button></div>
+    <input id="amount" inputmode="decimal" value="5" aria-label="Amount in USDC">
+    <button class="btn" id="go">Connect wallet</button>
+    <div class="sum" id="sum" hidden></div>
+    <button class="btn alt" id="confirm" hidden>Confirm in wallet</button>
+    <div class="msg" id="msg"></div>
+    <div class="pp">Powered by <a href="https://panta.market" target="_blank" rel="noopener">Panta</a></div>
+  </section>
+
+  <footer>Prediction markets involve risk. Only use money you can afford to lose.<br><a href="/risk">Risk</a> · <a href="/privacy">Privacy</a> · <a href="/status">Honest status</a> · Powered by <a href="https://panta.market" target="_blank" rel="noopener">Panta</a></footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.98.4/lib/index.iife.min.js"></script>
+<script>
+const qs = new URLSearchParams(location.search);
+const MARKET = (qs.get("market") || "").trim();
+const $ = (id) => document.getElementById(id);
+let side = "yes", wallet = "", quote = null, market = null;
+
+async function api(path, opts = {}) {
+  const headers = { Accept: "application/json" };
+  if (opts.body) headers["Content-Type"] = "application/json";
+  const r = await fetch("/api/panta/" + path, { method: opts.method || "GET", headers, body: opts.body ? JSON.stringify(opts.body) : undefined });
+  const t = await r.text(); let j; try { j = JSON.parse(t); } catch { j = t; }
+  if (!r.ok) {
+    let msg;
+    if (typeof j === "string") msg = j.slice(0, 160);
+    else { const v = j && (j.detail ?? j.message ?? j.code ?? j.error); msg = typeof v === "string" ? v : v ? JSON.stringify(v).slice(0, 220) : ""; }
+    throw new Error((msg || "Request failed") + " (HTTP " + r.status + ")");
+  }
+  return j;
+}
+const say = (t, cls = "") => { $("msg").className = "msg " + cls; $("msg").textContent = t; };
+const num = (v) => (v === null || v === undefined || v === "" || !isFinite(Number(v)) ? null : Number(v));
+const toDate = (v) => { if (!v) return null; const n = Number(v); return isFinite(n) ? new Date(n < 1e12 ? n * 1000 : n) : new Date(v); };
+const money = (n) => "$" + Number(n).toFixed(2);
+
+function getProvider() {
+  const p = window.phantom && window.phantom.solana;
+  if (p && p.isPhantom) return p;
+  if (window.solana && window.solana.isPhantom) return window.solana;
+  if (window.solflare && window.solflare.isSolflare) return window.solflare;
+  return null;
+}
+function toTx(ixs, payer, blockhash) {
+  const W = solanaWeb3;
+  const bytes = (b64) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+  const instructions = ixs.map((ix) => new W.TransactionInstruction({
+    programId: new W.PublicKey(ix.programId),
+    keys: ix.accounts.map((a) => ({ pubkey: new W.PublicKey(a.pubkey), isSigner: a.isSigner, isWritable: a.isWritable })),
+    data: bytes(ix.data),
+  }));
+  const msg = new W.TransactionMessage({ payerKey: new W.PublicKey(payer), recentBlockhash: blockhash, instructions }).compileToV0Message();
+  return new W.VersionedTransaction(msg);
+}
+
+async function loadMarket() {
+  if (!MARKET) { $("market").innerHTML = "<h1>No market selected</h1><div class='mut'>Open this page from the I-Called-It bot in Telegram.</div>"; return; }
+  try {
+    market = await api("markets/" + encodeURIComponent(MARKET));
+    const q = (market.onChain && market.onChain.question) || (market.title || "").trim() || (market.description || "").trim() || "Untitled market";
+    const y = num(market.yesPrice ?? market.primaryYesPrice), n = num(market.noPrice ?? market.primaryNoPrice);
+    const yp = y != null ? Math.round(y * 100) : 50, np = n != null ? Math.round(n * 100) : 100 - yp;
+    const end = toDate((market.onChain && market.onChain.endTime) || market.endTime);
+    const closed = market.resolved === true || (end && end < new Date()) || String(market.phase || market.status || "primary").toLowerCase() !== "primary";
+    $("market").innerHTML = "<h1></h1><div class='bar'><div class='y' style='flex:" + Math.max(yp, 8) + "'>YES " + yp + "%</div><div class='n' style='flex:" + Math.max(np, 8) + "'>NO " + np + "%</div></div><div class='mut'></div>";
+    $("market").querySelector("h1").textContent = q;
+    $("market").querySelector(".mut").textContent = (end ? "Closes " + end.toUTCString().replace(" GMT", " UTC") : "") + (market.volumeUsdc ? " - volume " + money(market.volumeUsdc) : "");
+    if (closed) { const ph = String(market.phase || market.status || "").toLowerCase(); $("market").insertAdjacentHTML("beforeend", ph === "secondary" ? "<div class='msg'>This market is in its secondary phase, which can't be bought through the Panta API yet. <a href='https://www.panta.market/' target='_blank' rel='noopener' style='color:#bfff46'>Trade it on panta.market</a>.</div>" : "<div class='msg err'>Trading is closed for this market.</div>"); return; }
+    $("buy").hidden = false;
+    if (/sandbox|fixture/i.test(JSON.stringify(market).slice(0, 2000))) say("Test data: this is a sandbox market, nothing real can be bought.", "err");
+  } catch (e) { $("market").innerHTML = "<h1>Could not load this market</h1><div class='msg err'></div>"; $("market").querySelector(".err").textContent = e.message; }
+}
+
+function setSide(s) { side = s; $("sy").classList.toggle("on", s === "yes"); $("sn").classList.toggle("on", s === "no"); quote = null; $("sum").hidden = true; $("confirm").hidden = true; }
+$("sy").onclick = () => setSide("yes"); $("sn").onclick = () => setSide("no");
+$("amts").onclick = (e) => { if (e.target.dataset.a) { $("amount").value = e.target.dataset.a; quote = null; $("sum").hidden = true; $("confirm").hidden = true; } };
+$("amount").oninput = () => { quote = null; $("sum").hidden = true; $("confirm").hidden = true; };
+
+$("go").onclick = async () => {
+  try {
+    const p = getProvider();
+    if (!p) {
+      say("No Solana wallet found. Opening this page inside Phantom...", "err");
+      location.href = "https://phantom.app/ul/browse/" + encodeURIComponent(location.href) + "?ref=" + encodeURIComponent(location.origin);
+      return;
+    }
+    if (!wallet) { const r = await p.connect(); wallet = String((r && r.publicKey) || p.publicKey); $("go").textContent = "Get quote"; say("Wallet connected: " + wallet.slice(0, 4) + "..." + wallet.slice(-4), "ok"); return; }
+    const amt = Number($("amount").value);
+    if (!(amt > 0)) return say("Enter an amount above 0.", "err");
+    $("go").disabled = true; say("Getting your quote...");
+    quote = await api("primaryorderquote", { method: "POST", body: { wallet, marketId: MARKET, side, amountUsdc: amt.toFixed(2) } });
+    const shares = num(quote.shares);
+    $("sum").innerHTML = "<div><span>You buy</span><b>" + side.toUpperCase() + "</b></div><div><span>You pay</span><b>" + money(quote.amountUsdc) + "</b></div><div><span>Fee</span><b>" + money(quote.feeUsdc || 0) + "</b></div><div><span>Shares</span><b>" + (shares != null ? shares.toFixed(2) : "-") + "</b></div><div><span>If you are right</span><b>about " + (shares != null ? money(shares) : "-") + "</b></div>";
+    $("sum").hidden = false; $("confirm").hidden = false; say("Quote ready. It expires in about 90 seconds.");
+  } catch (e) { say(e.message, "err"); } finally { $("go").disabled = false; }
+};
+
+$("confirm").onclick = async () => {
+  const p = getProvider();
+  try {
+    if (!quote) return say("Get a quote first.", "err");
+    if (quote.expiresAt && new Date(quote.expiresAt) < new Date(Date.now() + 5000)) { $("confirm").hidden = true; return say("That quote expired. Tap Get quote again.", "err"); }
+    $("confirm").disabled = true; say("Preparing the transaction...");
+    const b = await api("primaryorderbuild", { method: "POST", body: { quoteId: quote.quoteId, wallet, maxSlippageBps: 100 } });
+    if (!b.instructions || !b.instructions.length) throw new Error("This is test data: there is nothing real to sign.");
+    if (qs.get("dry")) { say("Dry run OK: Panta built " + b.instructions.length + " instruction(s) for order " + String(b.orderId).slice(0, 8) + "... Nothing was signed or sent.", "ok"); return; }
+    say("Approve the transaction in your wallet...");
+    const res = await p.signAndSendTransaction(toTx(b.instructions, wallet, b.recentBlockhash));
+    const sig = res && res.signature ? res.signature : res;
+    say("Sent. Confirming with Panta...");
+    await api("primaryordersubmit", { method: "POST", body: { orderId: b.orderId, signature: sig, wallet } });
+    let status = "submitted";
+    for (let i = 0; i < 6; i++) {
+      try { const v = await api("primaryorderverify", { method: "POST", body: { orderId: b.orderId, signature: sig, wallet } }); status = v.status || status; if (/process|confirm|complete|success/i.test(status)) break; } catch {}
+      await new Promise((r) => setTimeout(r, 5000));
+    }
+    try { await api("trades", { method: "POST", body: { signature: sig, wallet, marketId: MARKET, quoteId: quote.quoteId, clientOrderId: b.orderId } }); } catch {}
+    $("sum").hidden = true; $("confirm").hidden = true; quote = null;
+    $("msg").className = "msg ok";
+    $("msg").innerHTML = "Done! Status: " + String(status).replace(/[<>&]/g, "") + '. <a href="https://solscan.io/tx/' + encodeURIComponent(sig) + '" target="_blank" rel="noopener" style="color:#bfff46">View transaction</a>';
+  } catch (e) { say(e.message || String(e), "err"); } finally { $("confirm").disabled = false; }
+};
+
+loadMarket();
+</script>
+</body>
+</html>
